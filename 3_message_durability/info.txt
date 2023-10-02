@@ -1,0 +1,26 @@
+We have learned how to make sure that even if the consumer dies, the task isn't lost.
+But our tasks will still be lost if RabbitMQ server stops.
+
+When RabbitMQ quits or crashes it will forget the queues and messages unless you tell it not to.
+Two things are required to make sure that messages aren't lost: we need to mark both the queue and messages as durable.
+
+First, we need to make sure that the queue will survive a RabbitMQ node restart.
+In order to do so, we need to declare it as durable:
+
+
+Fair dispatch
+You might have noticed that the dispatching still doesn't work exactly as we want. For example in a situation with
+two workers, when all odd messages are heavy and even messages are light, one worker will be constantly busy and the
+other one will do hardly any work. Well, RabbitMQ doesn't know anything about that and will still dispatch messages evenly.
+
+This happens because RabbitMQ just dispatches a message when the message enters the queue. It doesn't look at the number
+of unacknowledged messages for a consumer. It just blindly dispatches every n-th message to the n-th consumer.
+
+Producer -> Queue -> Consuming: RabbitMQ dispatching messages.
+In order to defeat that we can set the prefetch count with the value of 1. This tells RabbitMQ not to give more than
+one message to a worker at a time. Or, in other words, don't dispatch a new message to a worker until it has processed and
+acknowledged the previous one. Instead, it will dispatch it to the next worker that is not still busy.
+
+Note about queue size
+If all the workers are busy, your queue can fill up. You will want to keep an eye on that,
+and maybe add more workers, or have some other strategy.
